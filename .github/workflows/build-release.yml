@@ -1,0 +1,71 @@
+name: Build Files App (Release)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    env:
+      REPO_URL: https://github.com/files-community/Files
+      SOLUTION_FILE: Files.slnx
+      CONFIGURATION: Release
+      PLATFORM: x64
+      DOTNET_VERSION: 10.0.x
+
+    steps:
+      # 1️⃣ Clone the external repository manually
+      - name: Clone Files repository
+        run: |
+          git clone $env:REPO_URL
+          cd Files
+          git submodule update --init --recursive
+
+      # 2️⃣ Setup .NET 10 SDK
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # 3️⃣ Install Windows App SDK workload
+      - name: Install Windows App SDK workload
+        run: dotnet workload install windowsappsdk
+
+      # 4️⃣ Setup MSBuild from VS 2022
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # 5️⃣ Restore NuGet packages
+      - name: Restore dependencies
+        working-directory: Files
+        run: |
+          msbuild $env:SOLUTION_FILE `
+            /t:Restore `
+            /p:Configuration=$env:CONFIGURATION `
+            /p:Platform=$env:PLATFORM
+
+      # 6️⃣ Build Release package (MSIX bundle)
+      - name: Build Release x64
+        working-directory: Files
+        run: |
+          msbuild $env:SOLUTION_FILE `
+            /p:Configuration=$env:CONFIGURATION `
+            /p:Platform=$env:PLATFORM `
+            /p:AppxBundle=Always `
+            /p:AppxBundlePlatforms=$env:PLATFORM `
+            /p:UapAppxPackageBuildMode=StoreUpload `
+            /p:GenerateAppInstallerFile=false
+
+      # 7️⃣ Upload artifacts
+      - name: Upload MSIX artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Files-Release-x64
+          path: |
+            Files/**/AppPackages/**
+            Files/**/*.msixbundle
+            Files/**/*.appxbundle
