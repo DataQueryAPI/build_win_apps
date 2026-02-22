@@ -34,10 +34,10 @@ jobs:
         Start-Process -FilePath $installerPath -ArgumentList "/quiet" -Wait
         
     - name: Restore NuGet packages
-      run: dotnet restore Files.slnx
+      run: dotnet restore Files.slnx /p:RuntimeIdentifier=win-x64 /p:PublishReadyToRun=false
       
     - name: Build Files.Package
-      run: msbuild Files.slnx /p:Configuration=Release /p:Platform=x64 /p:AppxBundle=Always /p:UapAppxPackageBuildMode=SideloadOnly
+      run: msbuild Files.slnx /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:PublishReadyToRun=false /p:AppxBundle=Always /p:UapAppxPackageBuildMode=SideloadOnly
       
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
